@@ -1,4 +1,4 @@
-package com.example.gestiondesrendezvousmedicauxbackend.Model;
+package com.example.gestiondesrendezvousmedicauxbackend.model;
 
 
 import jakarta.persistence.*;

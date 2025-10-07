@@ -1,21 +1,22 @@
-package com.example.gestiondesrendezvousmedicauxbackend.Model;
+package com.example.gestiondesrendezvousmedicauxbackend.model;
+
 
 import jakarta.persistence.*;
 import lombok.*;
-import java.util.List;
 
 @Entity
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Specialite {
+public class RecommandationIA {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String titre;
+    private String type;
     private String description;
+    private String resultats;
 
-    @OneToMany(mappedBy = "specialite")
-    private List<Docteur> docteurs;
+    @ManyToOne
+    private Patient patient;
 }
