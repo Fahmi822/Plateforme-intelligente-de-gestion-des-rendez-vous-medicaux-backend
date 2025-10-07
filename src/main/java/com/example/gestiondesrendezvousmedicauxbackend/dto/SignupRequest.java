@@ -1,31 +1,14 @@
-package com.example.gestiondesrendezvousmedicauxbackend.model;
+package com.example.gestiondesrendezvousmedicauxbackend.dto;
 
-import jakarta.persistence.*;
-import lombok.*;
 
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
+import lombok.Data;
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class Utilisateur {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
+public class SignupRequest {
     private String nom;
     private String prenom;
     private String email;
     private String motDePasse;
     private String role;
-
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     public String getNom() {
         return nom;
