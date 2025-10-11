@@ -3,10 +3,13 @@ package com.example.gestiondesrendezvousmedicauxbackend.service;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.*;
 import com.example.gestiondesrendezvousmedicauxbackend.model.*;
 import com.example.gestiondesrendezvousmedicauxbackend.repositories.*;
-import com.example.gestiondesrendezvousmedicauxbackend.security.JwtService;
+import com.example.gestiondesrendezvousmedicauxbackend.jwt.JwtTokenUtil;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.*;
-import org.springframework.security.core.userdetails.User;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,26 +30,37 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private JwtService jwtService;
+    private JwtTokenUtil jwtTokenUtil;
 
     @Autowired
     private AuthenticationManager authenticationManager;
 
     public LoginResponse login(LoginRequest request) {
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getMotDePasse())
-        );
+        try {
+            System.out.println("Tentative de connexion pour: " + request.getEmail());
 
-        Utilisateur user = utilisateurRepository.findByEmail(request.getEmail()).orElseThrow();
-        String token = jwtService.generateToken(
-                User.builder()
-                        .username(user.getEmail())
-                        .password(user.getMotDePasse())
-                        .roles(user.getRole())
-                        .build()
-        );
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getMotDePasse())
+            );
 
-        return new LoginResponse(token, user.getRole(), "Connexion réussie !");
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtTokenUtil.generateToken(userDetails);
+
+            Utilisateur user = utilisateurRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+
+            System.out.println("Connexion réussie pour: " + user.getEmail() + ", rôle: " + user.getRole());
+
+            return new LoginResponse(token, user.getRole(), "Connexion réussie !");
+
+        } catch (BadCredentialsException e) {
+            System.out.println("Bad credentials pour: " + request.getEmail());
+            throw new RuntimeException("Email ou mot de passe incorrect");
+        } catch (Exception e) {
+            System.out.println("Erreur lors de la connexion: " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Erreur lors de la connexion: " + e.getMessage());
+        }
     }
 
     @Transactional
@@ -54,7 +68,6 @@ public class AuthService {
         if (utilisateurRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("Email déjà utilisé !");
         }
-
 
         switch (request.getRole().toUpperCase()) {
             case "PATIENT":
@@ -64,9 +77,8 @@ public class AuthService {
                 patient.setEmail(request.getEmail());
                 patient.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
                 patient.setRole("PATIENT");
-
                 patientRepository.save(patient);
-                return "Inscription réussie pour le patient : " + patient.getNom();
+                return "Patient inscrit avec succès: " + patient.getNom();
 
             case "DOCTEUR":
                 Docteur docteur = new Docteur();
@@ -75,22 +87,18 @@ public class AuthService {
                 docteur.setEmail(request.getEmail());
                 docteur.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
                 docteur.setRole("DOCTEUR");
-                // La spécialité pourra être ajoutée ultérieurement
-
                 docteurRepository.save(docteur);
-                return "Inscription réussie pour le docteur : " + docteur.getNom();
+                return "Docteur inscrit avec succès: " + docteur.getNom();
 
             case "ADMIN":
-                // Pour ADMIN, créer directement un Utilisateur
                 Utilisateur admin = new Utilisateur();
                 admin.setNom(request.getNom());
                 admin.setPrenom(request.getPrenom());
                 admin.setEmail(request.getEmail());
                 admin.setMotDePasse(passwordEncoder.encode(request.getMotDePasse()));
                 admin.setRole("ADMIN");
-
                 utilisateurRepository.save(admin);
-                return "Inscription réussie pour l'admin : " + admin.getNom();
+                return "Admin inscrit avec succès: " + admin.getNom();
 
             default:
                 throw new RuntimeException("Rôle non reconnu: " + request.getRole());

@@ -30,7 +30,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // Récupérer le token depuis le header Authorization
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String email = null;
@@ -40,11 +39,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 email = jwtTokenUtil.getEmailFromJwt(token);
             } catch (Exception e) {
-                System.out.println("Erreur lors de l'extraction de l'email : " + e.getMessage());
+                logger.error("Erreur lors de l'extraction de l'email : " + e.getMessage());
             }
         }
 
-        // Vérifier si l'utilisateur n'est pas déjà authentifié
         if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
@@ -64,4 +62,3 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

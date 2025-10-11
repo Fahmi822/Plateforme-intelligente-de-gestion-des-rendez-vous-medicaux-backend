@@ -1,36 +1,74 @@
 package com.example.gestiondesrendezvousmedicauxbackend.jwt;
 
 import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
+
+import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
 
 @Component
 public class JwtTokenUtil {
 
-    private final String jwtSecret = "cleSecreteJWT123"; // ⚠️ à sécuriser plus tard
+    private final String jwtSecret = "VotreCleSuperSecurePourJWTQuiDoitEtreTresLongueAuMoins64Caracteres1234567890ABCDEF";
+    private final Key key = Keys.hmacShaKeyFor(jwtSecret.getBytes());
+
     private final long jwtExpirationMs = 86400000; // 24h
 
-    public String generateToken(String email, String role) {
+    public String generateToken(UserDetails userDetails) {
+        Map<String, Object> claims = new HashMap<>();
+
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .orElse("USER");
+
+        claims.put("role", role);
+
         return Jwts.builder()
-                .setSubject(email)
-                .claim("role", role)
+                .setClaims(claims)
+                .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + jwtExpirationMs))
-                .signWith(SignatureAlgorithm.HS512, jwtSecret)
+                .setExpiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
+                .signWith(key, SignatureAlgorithm.HS256)
                 .compact();
     }
 
     public String getEmailFromJwt(String token) {
-        return Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token).getBody().getSubject();
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    public String getRoleFromJwt(String token) {
+        return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        final Claims claims = extractAllClaims(token);
+        return claimsResolver.apply(claims);
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
     }
 
     public boolean validateJwtToken(String token) {
         try {
-            Jwts.parser().setSigningKey(jwtSecret).parseClaimsJws(token);
+            Jwts.parserBuilder()
+                    .setSigningKey(key)
+                    .build()
+                    .parseClaimsJws(token);
             return true;
-        } catch (JwtException e) {
-            System.out.println("JWT invalide : " + e.getMessage());
+        } catch (JwtException | IllegalArgumentException e) {
+            System.out.println("Token JWT invalide: " + e.getMessage());
+            return false;
         }
-        return false;
     }
 }
