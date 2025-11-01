@@ -25,6 +25,11 @@ public class CustomUserDetailsService implements UserDetailsService {
         Utilisateur utilisateur = utilisateurRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé avec l'email: " + email));
 
+        // Vérifier si le compte est actif
+        if (!utilisateur.isActif()) {
+            throw new UsernameNotFoundException("Compte désactivé");
+        }
+
         List<GrantedAuthority> authorities = Collections.singletonList(
                 new SimpleGrantedAuthority("ROLE_" + utilisateur.getRole())
         );

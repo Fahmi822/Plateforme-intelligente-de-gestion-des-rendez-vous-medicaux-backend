@@ -10,7 +10,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-
 @Component
 public class JwtTokenUtil {
 
@@ -19,7 +18,7 @@ public class JwtTokenUtil {
 
     private final long jwtExpirationMs = 86400000; // 24h
 
-    public String generateToken(UserDetails userDetails) {
+    public String generateToken(UserDetails userDetails, Long userId) {
         Map<String, Object> claims = new HashMap<>();
 
         String role = userDetails.getAuthorities().stream()
@@ -28,6 +27,7 @@ public class JwtTokenUtil {
                 .orElse("USER");
 
         claims.put("role", role);
+        claims.put("userId", userId);
 
         return Jwts.builder()
                 .setClaims(claims)
@@ -44,6 +44,10 @@ public class JwtTokenUtil {
 
     public String getRoleFromJwt(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+
+    public Long getUserIdFromJwt(String token) {
+        return extractClaim(token, claims -> claims.get("userId", Long.class));
     }
 
     public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
