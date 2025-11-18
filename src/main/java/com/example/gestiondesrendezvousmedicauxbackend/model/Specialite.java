@@ -1,16 +1,17 @@
 package com.example.gestiondesrendezvousmedicauxbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
 public class Specialite {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -21,19 +22,16 @@ public class Specialite {
     private String description;
 
     @OneToMany(mappedBy = "specialite", fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Docteur> docteurs = new ArrayList<>();
 
-    // Constructeur par défaut
-    public Specialite() {
-    }
+    public Specialite() {}
 
-    // Constructeur avec paramètres
     public Specialite(String titre, String description) {
         this.titre = titre;
         this.description = description;
     }
 
-    // Getters et Setters explicites
     public Long getId() {
         return id;
     }
@@ -56,13 +54,5 @@ public class Specialite {
 
     public void setDescription(String description) {
         this.description = description;
-    }
-
-    public List<Docteur> getDocteurs() {
-        return docteurs;
-    }
-
-    public void setDocteurs(List<Docteur> docteurs) {
-        this.docteurs = docteurs;
     }
 }

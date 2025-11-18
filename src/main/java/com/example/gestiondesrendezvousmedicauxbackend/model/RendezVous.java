@@ -1,14 +1,16 @@
 package com.example.gestiondesrendezvousmedicauxbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Setter
-@AllArgsConstructor
 public class RendezVous {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -29,11 +31,11 @@ public class RendezVous {
     @Column(name = "date_modification")
     private LocalDateTime dateModification = LocalDateTime.now();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "patient_id", nullable = false)
     private Patient patient;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "docteur_id", nullable = false)
     private Docteur docteur;
 
@@ -41,13 +43,11 @@ public class RendezVous {
         PLANIFIE, CONFIRME, ANNULE, TERMINE, ABSENT
     }
 
-    // Constructeur par défaut
     public RendezVous() {
         this.dateCreation = LocalDateTime.now();
         this.dateModification = LocalDateTime.now();
     }
 
-    // Constructeur avec paramètres
     public RendezVous(LocalDateTime dateHeure, String motif, Patient patient, Docteur docteur) {
         this();
         this.dateHeure = dateHeure;
@@ -57,7 +57,6 @@ public class RendezVous {
         this.statut = StatutRendezVous.PLANIFIE;
     }
 
-    // Getters et Setters explicites (au cas où Lombok ne fonctionne pas)
     public Long getId() {
         return id;
     }

@@ -1,7 +1,9 @@
 package com.example.gestiondesrendezvousmedicauxbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,26 +11,21 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 public class Patient extends Utilisateur {
+
     private LocalDate dateNaissance;
     private String groupeSanguin;
     private String antecedentsMedicaux;
+    private String photo;
 
     @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<RendezVous> rendezVous = new ArrayList<>();
 
-    @OneToMany(mappedBy = "patient", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Avis> avis = new ArrayList<>();
-
-    // Constructeur par défaut OBLIGATOIRE
     public Patient() {
         super();
     }
 
-    // Constructeurs avec paramètres
     public Patient(String nom, String prenom, String email, String motDePasse) {
         super(nom, prenom, email, motDePasse, "PATIENT");
     }
@@ -39,5 +36,45 @@ public class Patient extends Utilisateur {
         this.dateNaissance = dateNaissance;
         this.groupeSanguin = groupeSanguin;
         this.antecedentsMedicaux = antecedentsMedicaux;
+    }
+
+    public LocalDate getDateNaissance() {
+        return dateNaissance;
+    }
+
+    public void setDateNaissance(LocalDate dateNaissance) {
+        this.dateNaissance = dateNaissance;
+    }
+
+    public String getGroupeSanguin() {
+        return groupeSanguin;
+    }
+
+    public void setGroupeSanguin(String groupeSanguin) {
+        this.groupeSanguin = groupeSanguin;
+    }
+
+    public String getAntecedentsMedicaux() {
+        return antecedentsMedicaux;
+    }
+
+    public void setAntecedentsMedicaux(String antecedentsMedicaux) {
+        this.antecedentsMedicaux = antecedentsMedicaux;
+    }
+
+    public String getPhoto() {
+        return photo;
+    }
+
+    public void setPhoto(String photo) {
+        this.photo = photo;
+    }
+
+    public List<RendezVous> getRendezVous() {
+        return rendezVous;
+    }
+
+    public void setRendezVous(List<RendezVous> rendezVous) {
+        this.rendezVous = rendezVous;
     }
 }

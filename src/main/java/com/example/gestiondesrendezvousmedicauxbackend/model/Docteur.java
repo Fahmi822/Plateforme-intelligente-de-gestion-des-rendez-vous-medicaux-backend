@@ -1,18 +1,18 @@
 package com.example.gestiondesrendezvousmedicauxbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 public class Docteur extends Utilisateur {
-    @ManyToOne
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "specialite_id")
     private Specialite specialite;
 
@@ -23,23 +23,20 @@ public class Docteur extends Utilisateur {
     private String photo;
 
     @OneToMany(mappedBy = "docteur", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Disponibilite> disponibilites = new ArrayList<>();
 
     @OneToMany(mappedBy = "docteur", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<RendezVous> rendezVous = new ArrayList<>();
-
-    @OneToMany(mappedBy = "docteur", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Avis> avis = new ArrayList<>();
 
     private Double noteMoyenne = 0.0;
     private Integer nombreAvis = 0;
 
-    // Constructeur par défaut OBLIGATOIRE
     public Docteur() {
         super();
     }
 
-    // Constructeurs avec paramètres
     public Docteur(String nom, String prenom, String email, String motDePasse) {
         super(nom, prenom, email, motDePasse, "DOCTEUR");
     }
@@ -51,7 +48,6 @@ public class Docteur extends Utilisateur {
         this.numeroLicence = numeroLicence;
     }
 
-    // Getters et Setters explicites (au cas où Lombok ne fonctionne pas)
     public Specialite getSpecialite() {
         return specialite;
     }
@@ -98,6 +94,22 @@ public class Docteur extends Utilisateur {
 
     public void setPhoto(String photo) {
         this.photo = photo;
+    }
+
+    public List<Disponibilite> getDisponibilites() {
+        return disponibilites;
+    }
+
+    public void setDisponibilites(List<Disponibilite> disponibilites) {
+        this.disponibilites = disponibilites;
+    }
+
+    public List<RendezVous> getRendezVous() {
+        return rendezVous;
+    }
+
+    public void setRendezVous(List<RendezVous> rendezVous) {
+        this.rendezVous = rendezVous;
     }
 
     public Double getNoteMoyenne() {

@@ -1,23 +1,64 @@
 package com.example.gestiondesrendezvousmedicauxbackend.dto;
 
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 import java.time.LocalDateTime;
 
-public class RendezVousDTO {
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class RendezVousDTO extends BaseDTO {
     private LocalDateTime dateHeure;
+    private String statut;
     private String motif;
-    private Long patientId;
-    private Long docteurId;
+    private String notes;
+    private PatientDTO patient;
+    private DocteurDTO docteur;
 
-    // Getters et Setters
-    public LocalDateTime getDateHeure() { return dateHeure; }
-    public void setDateHeure(LocalDateTime dateHeure) { this.dateHeure = dateHeure; }
+    public LocalDateTime getDateHeure() {
+        return dateHeure;
+    }
 
-    public String getMotif() { return motif; }
-    public void setMotif(String motif) { this.motif = motif; }
+    public void setDateHeure(LocalDateTime dateHeure) {
+        this.dateHeure = dateHeure;
+    }
 
-    public Long getPatientId() { return patientId; }
-    public void setPatientId(Long patientId) { this.patientId = patientId; }
+    public String getStatut() {
+        return statut;
+    }
 
-    public Long getDocteurId() { return docteurId; }
-    public void setDocteurId(Long docteurId) { this.docteurId = docteurId; }
+    public void setStatut(String statut) {
+        this.statut = statut;
+    }
+
+    public String getMotif() {
+        return motif;
+    }
+
+    public void setMotif(String motif) {
+        this.motif = motif;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public PatientDTO getPatient() {
+        return patient;
+    }
+
+    public void setPatient(PatientDTO patient) {
+        this.patient = patient;
+    }
+
+    public DocteurDTO getDocteur() {
+        return docteur;
+    }
+
+    public void setDocteur(DocteurDTO docteur) {
+        this.docteur = docteur;
+    }
 }

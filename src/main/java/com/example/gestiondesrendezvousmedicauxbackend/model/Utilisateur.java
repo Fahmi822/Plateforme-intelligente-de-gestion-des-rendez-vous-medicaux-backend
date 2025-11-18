@@ -1,16 +1,19 @@
 package com.example.gestiondesrendezvousmedicauxbackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public abstract class Utilisateur {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,6 +28,7 @@ public abstract class Utilisateur {
     private String email;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String motDePasse;
 
     @Column(nullable = false)
@@ -37,12 +41,14 @@ public abstract class Utilisateur {
     @Column(name = "date_creation")
     private LocalDateTime dateCreation = LocalDateTime.now();
 
-    // Constructeur par défaut OBLIGATOIRE
+    @Column(name = "date_modification")
+    private LocalDateTime dateModification = LocalDateTime.now();
+
     public Utilisateur() {
         this.dateCreation = LocalDateTime.now();
+        this.dateModification = LocalDateTime.now();
     }
 
-    // Constructeur avec paramètres
     public Utilisateur(String nom, String prenom, String email, String motDePasse, String role) {
         this();
         this.nom = nom;
@@ -52,7 +58,31 @@ public abstract class Utilisateur {
         this.role = role;
     }
 
-    // Getters et Setters explicites
+    // Ajouter les getters et setters manquants qui causent les erreurs
+    public boolean isActif() {
+        return actif;
+    }
+
+    public void setActif(boolean actif) {
+        this.actif = actif;
+    }
+
+    public LocalDateTime getDateModification() {
+        return dateModification;
+    }
+
+    public void setDateModification(LocalDateTime dateModification) {
+        this.dateModification = dateModification;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
     public Long getId() {
         return id;
     }
@@ -93,14 +123,6 @@ public abstract class Utilisateur {
         this.motDePasse = motDePasse;
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public void setRole(String role) {
-        this.role = role;
-    }
-
     public String getTelephone() {
         return telephone;
     }
@@ -115,14 +137,6 @@ public abstract class Utilisateur {
 
     public void setAdresse(String adresse) {
         this.adresse = adresse;
-    }
-
-    public boolean isActif() {
-        return actif;
-    }
-
-    public void setActif(boolean actif) {
-        this.actif = actif;
     }
 
     public LocalDateTime getDateCreation() {

@@ -1,11 +1,14 @@
 package com.example.gestiondesrendezvousmedicauxbackend.service;
 
+import com.example.gestiondesrendezvousmedicauxbackend.dto.DocteurSignupRequest;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.LoginRequest;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.LoginResponse;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.SignupRequest;
+import com.example.gestiondesrendezvousmedicauxbackend.model.Utilisateur;
 import com.example.gestiondesrendezvousmedicauxbackend.model.*;
 import com.example.gestiondesrendezvousmedicauxbackend.repositories.*;
 import com.example.gestiondesrendezvousmedicauxbackend.jwt.JwtTokenUtil;
+import com.example.gestiondesrendezvousmedicauxbackend.security.CustomUserDetailsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Transactional
 public class AuthService {
 
     @Autowired
@@ -43,11 +47,16 @@ public class AuthService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private CustomUserDetailsService userDetailsService;
+
+    @Autowired
+    private SpecialiteRepository specialiteRepository;
+
     public LoginResponse login(LoginRequest request) {
         try {
             System.out.println("Tentative de connexion pour: " + request.getEmail());
 
-            // Vérifier si l'utilisateur existe et est actif
             Utilisateur user = utilisateurRepository.findByEmailAndActifTrue(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé ou compte désactivé"));
 
@@ -55,16 +64,13 @@ public class AuthService {
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getMotDePasse())
             );
 
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-            // Récupérer l'ID de l'utilisateur selon son type
+            UserDetails userDetails = userDetailsService.loadUserByUsername(request.getEmail());
             Long userId = getUserIdByRole(user);
-
             String token = jwtTokenUtil.generateToken(userDetails, userId);
 
             System.out.println("Connexion réussie pour: " + user.getEmail() + ", rôle: " + user.getRole() + ", ID: " + userId);
 
-            return new LoginResponse(token, user.getRole(), "Connexion réussie !");
+            return new LoginResponse(token, user.getRole(), userId, "Connexion réussie !");
 
         } catch (BadCredentialsException e) {
             System.out.println("Bad credentials pour: " + request.getEmail());
@@ -87,7 +93,9 @@ public class AuthService {
                         .orElseThrow(() -> new RuntimeException("Docteur non trouvé"));
                 return docteur.getId();
             case "ADMIN":
-                return user.getId();
+                Admin admin = adminRepository.findByEmail(user.getEmail())
+                        .orElseThrow(() -> new RuntimeException("Admin non trouvé"));
+                return admin.getId();
             default:
                 throw new RuntimeException("Rôle non reconnu: " + user.getRole());
         }
@@ -140,14 +148,50 @@ public class AuthService {
                 throw new RuntimeException("Rôle non reconnu: " + request.getRole());
         }
 
-        // Envoyer un email de confirmation
         try {
             emailService.envoyerEmailConfirmation(request.getEmail(), request.getNom(), request.getRole());
         } catch (Exception e) {
             System.out.println("Erreur lors de l'envoi de l'email: " + e.getMessage());
-            // Ne pas bloquer l'inscription si l'email échoue
         }
 
         return result;
+    }
+    @Transactional
+    public String signupDocteur(DocteurSignupRequest request) {
+        if (utilisateurRepository.existsByEmail(request.getEmail())) {
+            throw new RuntimeException("Email déjà utilisé !");
+        }
+
+        // Vérifier si une spécialité est fournie
+        if (request.getSpecialiteId() == null) {
+            throw new RuntimeException("La spécialité est obligatoire pour un docteur");
+        }
+
+        // Récupérer la spécialité
+        Specialite specialite = specialiteRepository.findById(request.getSpecialiteId())
+                .orElseThrow(() -> new RuntimeException("Spécialité non trouvée"));
+
+        // Créer le docteur
+        Docteur docteur = new Docteur(
+                request.getNom(),
+                request.getPrenom(),
+                request.getEmail(),
+                passwordEncoder.encode(request.getMotDePasse())
+        );
+        docteur.setSpecialite(specialite);
+        docteur.setNumeroLicence(request.getNumeroLicence());
+        docteur.setAnneesExperience(request.getAnneesExperience());
+        docteur.setTarifConsultation(request.getTarifConsultation());
+        docteur.setLangue(request.getLangue());
+
+        docteurRepository.save(docteur);
+
+        try {
+            emailService.envoyerEmailConfirmation(request.getEmail(), request.getNom(), "DOCTEUR");
+        } catch (Exception e) {
+            System.out.println("Erreur lors de l'envoi de l'email: " + e.getMessage());
+        }
+
+        return "Docteur inscrit avec succès: " + docteur.getNom() + " - Spécialité: " + specialite.getTitre();
     }
 }

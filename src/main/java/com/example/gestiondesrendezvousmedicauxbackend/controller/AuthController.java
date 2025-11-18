@@ -1,5 +1,6 @@
 package com.example.gestiondesrendezvousmedicauxbackend.controller;
 
+import com.example.gestiondesrendezvousmedicauxbackend.dto.DocteurSignupRequest;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.LoginRequest;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.LoginResponse;
 import com.example.gestiondesrendezvousmedicauxbackend.dto.SignupRequest;
@@ -24,7 +25,7 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new LoginResponse(null, null, e.getMessage()));
+                    .body(new LoginResponse(null, null, null, e.getMessage()));
         }
     }
 
@@ -34,10 +35,19 @@ public class AuthController {
             String result = authService.signup(request);
             return ResponseEntity.ok(result);
         } catch (RuntimeException e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Erreur interne du serveur: " + e.getMessage());
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+    @PostMapping("/signup/docteur")
+    public ResponseEntity<?> signupDocteur(@RequestBody DocteurSignupRequest request) {
+        try {
+            // S'assurer que le rôle est bien DOCTEUR
+            request.setRole("DOCTEUR");
+
+            String result = authService.signupDocteur(request);
+            return ResponseEntity.ok(result);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 }

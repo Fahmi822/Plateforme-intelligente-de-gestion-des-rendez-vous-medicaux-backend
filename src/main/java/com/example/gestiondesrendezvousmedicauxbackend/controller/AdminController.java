@@ -1,6 +1,9 @@
 package com.example.gestiondesrendezvousmedicauxbackend.controller;
 
-import com.example.gestiondesrendezvousmedicauxbackend.dto.StatistiquesGlobales;
+import com.example.gestiondesrendezvousmedicauxbackend.dto.*;
+import com.example.gestiondesrendezvousmedicauxbackend.mapper.EntityMapper;
+import com.example.gestiondesrendezvousmedicauxbackend.model.Utilisateur;
+import com.example.gestiondesrendezvousmedicauxbackend.model.RendezVous;
 import com.example.gestiondesrendezvousmedicauxbackend.model.*;
 import com.example.gestiondesrendezvousmedicauxbackend.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -34,7 +38,8 @@ public class AdminController {
     @Autowired
     private SpecialiteRepository specialiteRepository;
 
-    // ==================== STATISTIQUES ====================
+    @Autowired
+    private EntityMapper entityMapper;
 
     @GetMapping("/statistiques")
     public ResponseEntity<StatistiquesGlobales> getStatistiques() {
@@ -45,12 +50,10 @@ public class AdminController {
         stats.setTotalDocteurs(docteurRepository.count());
         stats.setTotalRendezVous(rendezVousRepository.count());
 
-        // Rendez-vous d'aujourd'hui
         LocalDateTime aujourdhuiDebut = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         LocalDateTime aujourdhuiFin = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
         stats.setRendezVousAujourdhui(rendezVousRepository.countByDateHeureBetween(aujourdhuiDebut, aujourdhuiFin));
 
-        // Calculs avancés
         stats.setRevenuMensuel(calculerRevenuMensuel());
         stats.setTauxOccupation(calculerTauxOccupation());
 
@@ -61,13 +64,11 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> getStatistiquesAvancees() {
         Map<String, Object> stats = new HashMap<>();
 
-        // Statistiques utilisateurs
         stats.put("utilisateursActifs", utilisateurRepository.countByActifTrue());
         stats.put("utilisateursInactifs", utilisateurRepository.countByActifFalse());
         stats.put("nouveauxUtilisateursMois", utilisateurRepository.findUtilisateursRecents(
                 LocalDateTime.now().minusMonths(1)).size());
 
-        // Statistiques rendez-vous par statut
         List<Object[]> statsRendezVous = rendezVousRepository.countByStatutGroupByStatut();
         Map<String, Long> rendezVousParStatut = new HashMap<>();
         for (Object[] stat : statsRendezVous) {
@@ -75,7 +76,6 @@ public class AdminController {
         }
         stats.put("rendezVousParStatut", rendezVousParStatut);
 
-        // Docteurs les plus actifs
         LocalDateTime debutMois = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         List<Object[]> docteursActifs = rendezVousRepository.findDocteursPlusActifs(debutMois, LocalDateTime.now());
         stats.put("docteursPlusActifs", docteursActifs);
@@ -83,41 +83,53 @@ public class AdminController {
         return ResponseEntity.ok(stats);
     }
 
-    // ==================== GESTION UTILISATEURS ====================
-
     @GetMapping("/utilisateurs")
-    public ResponseEntity<List<Utilisateur>> getAllUtilisateurs() {
+    public ResponseEntity<List<UtilisateurDTO>> getAllUtilisateurs() {
         List<Utilisateur> utilisateurs = utilisateurRepository.findAll();
-        return ResponseEntity.ok(utilisateurs);
+        List<UtilisateurDTO> utilisateurDTOs = utilisateurs.stream()
+                .map(entityMapper::toUtilisateurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(utilisateurDTOs);
     }
 
     @GetMapping("/utilisateurs/role/{role}")
-    public ResponseEntity<List<Utilisateur>> getUtilisateursByRole(@PathVariable String role) {
+    public ResponseEntity<List<UtilisateurDTO>> getUtilisateursByRole(@PathVariable String role) {
         List<Utilisateur> utilisateurs = utilisateurRepository.findByRole(role);
-        return ResponseEntity.ok(utilisateurs);
+        List<UtilisateurDTO> utilisateurDTOs = utilisateurs.stream()
+                .map(entityMapper::toUtilisateurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(utilisateurDTOs);
     }
 
     @GetMapping("/utilisateurs/actifs")
-    public ResponseEntity<List<Utilisateur>> getUtilisateursActifs() {
+    public ResponseEntity<List<UtilisateurDTO>> getUtilisateursActifs() {
         List<Utilisateur> utilisateurs = utilisateurRepository.findByActifTrue();
-        return ResponseEntity.ok(utilisateurs);
+        List<UtilisateurDTO> utilisateurDTOs = utilisateurs.stream()
+                .map(entityMapper::toUtilisateurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(utilisateurDTOs);
     }
 
     @GetMapping("/utilisateurs/recherche")
-    public ResponseEntity<List<Utilisateur>> searchUtilisateurs(@RequestParam String q) {
+    public ResponseEntity<List<UtilisateurDTO>> searchUtilisateurs(@RequestParam String q) {
         List<Utilisateur> utilisateurs = utilisateurRepository.searchUtilisateurs(q);
-        return ResponseEntity.ok(utilisateurs);
+        List<UtilisateurDTO> utilisateurDTOs = utilisateurs.stream()
+                .map(entityMapper::toUtilisateurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(utilisateurDTOs);
     }
 
     @PatchMapping("/utilisateurs/{id}/toggle-actif")
-    public ResponseEntity<Utilisateur> toggleUtilisateurActif(@PathVariable Long id) {
+    public ResponseEntity<UtilisateurDTO> toggleUtilisateurActif(@PathVariable Long id) {
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
+        // CORRECTION : Utiliser les méthodes correctes
         utilisateur.setActif(!utilisateur.isActif());
-        Utilisateur updated = utilisateurRepository.save(utilisateur);
+        utilisateur.setDateModification(LocalDateTime.now());
 
-        return ResponseEntity.ok(updated);
+        Utilisateur updated = utilisateurRepository.save(utilisateur);
+        return ResponseEntity.ok(entityMapper.toUtilisateurDTO(updated));
     }
 
     @DeleteMapping("/utilisateurs/{id}")
@@ -125,7 +137,7 @@ public class AdminController {
         Utilisateur utilisateur = utilisateurRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
 
-        // Empêcher la suppression des admins
+        // CORRECTION : Utiliser getRole() correctement
         if ("ADMIN".equals(utilisateur.getRole())) {
             throw new RuntimeException("Impossible de supprimer un administrateur");
         }
@@ -134,69 +146,90 @@ public class AdminController {
         return ResponseEntity.ok().build();
     }
 
-    // ==================== GESTION PATIENTS ====================
-
     @GetMapping("/patients")
-    public ResponseEntity<List<Patient>> getAllPatients() {
+    public ResponseEntity<List<PatientDTO>> getAllPatients() {
         List<Patient> patients = patientRepository.findAll();
-        return ResponseEntity.ok(patients);
+        List<PatientDTO> patientDTOs = patients.stream()
+                .map(entityMapper::toPatientDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(patientDTOs);
     }
 
     @GetMapping("/patients/actifs")
-    public ResponseEntity<List<Patient>> getPatientsActifs() {
+    public ResponseEntity<List<PatientDTO>> getPatientsActifs() {
         List<Patient> patients = patientRepository.findByActifTrue();
-        return ResponseEntity.ok(patients);
+        List<PatientDTO> patientDTOs = patients.stream()
+                .map(entityMapper::toPatientDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(patientDTOs);
     }
 
     @GetMapping("/patients/recherche")
-    public ResponseEntity<List<Patient>> searchPatients(@RequestParam String q) {
+    public ResponseEntity<List<PatientDTO>> searchPatients(@RequestParam String q) {
         List<Patient> patients = patientRepository.searchPatients(q);
-        return ResponseEntity.ok(patients);
+        List<PatientDTO> patientDTOs = patients.stream()
+                .map(entityMapper::toPatientDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(patientDTOs);
     }
 
-    // ==================== GESTION DOCTEURS ====================
-
     @GetMapping("/docteurs")
-    public ResponseEntity<List<Docteur>> getAllDocteurs() {
+    public ResponseEntity<List<DocteurDTO>> getAllDocteurs() {
         List<Docteur> docteurs = docteurRepository.findAll();
-        return ResponseEntity.ok(docteurs);
+        List<DocteurDTO> docteurDTOs = docteurs.stream()
+                .map(entityMapper::toDocteurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(docteurDTOs);
     }
 
     @GetMapping("/docteurs/actifs")
-    public ResponseEntity<List<Docteur>> getDocteursActifs() {
+    public ResponseEntity<List<DocteurDTO>> getDocteursActifs() {
         List<Docteur> docteurs = docteurRepository.findByActifTrue();
-        return ResponseEntity.ok(docteurs);
+        List<DocteurDTO> docteurDTOs = docteurs.stream()
+                .map(entityMapper::toDocteurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(docteurDTOs);
     }
 
     @GetMapping("/docteurs/meilleurs")
-    public ResponseEntity<List<Docteur>> getMeilleursDocteurs() {
+    public ResponseEntity<List<DocteurDTO>> getMeilleursDocteurs() {
         List<Docteur> docteurs = docteurRepository.findByNoteMoyenneGreaterThanEqual(4.0);
-        return ResponseEntity.ok(docteurs);
+        List<DocteurDTO> docteurDTOs = docteurs.stream()
+                .map(entityMapper::toDocteurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(docteurDTOs);
     }
 
     @GetMapping("/docteurs/recherche")
-    public ResponseEntity<List<Docteur>> searchDocteurs(@RequestParam String q) {
+    public ResponseEntity<List<DocteurDTO>> searchDocteurs(@RequestParam String q) {
         List<Docteur> docteurs = docteurRepository.searchDocteurs(q);
-        return ResponseEntity.ok(docteurs);
+        List<DocteurDTO> docteurDTOs = docteurs.stream()
+                .map(entityMapper::toDocteurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(docteurDTOs);
     }
 
-    // ==================== GESTION RENDEZ-VOUS ====================
-
     @GetMapping("/rendezvous")
-    public ResponseEntity<List<RendezVous>> getAllRendezVous() {
+    public ResponseEntity<List<RendezVousDTO>> getAllRendezVous() {
         List<RendezVous> rendezVous = rendezVousRepository.findAll();
-        return ResponseEntity.ok(rendezVous);
+        List<RendezVousDTO> rendezVousDTOs = rendezVous.stream()
+                .map(entityMapper::toRendezVousDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rendezVousDTOs);
     }
 
     @GetMapping("/rendezvous/recent")
-    public ResponseEntity<List<RendezVous>> getRendezVousRecent() {
+    public ResponseEntity<List<RendezVousDTO>> getRendezVousRecent() {
         LocalDateTime dateLimite = LocalDateTime.now().minusDays(7);
         List<RendezVous> rendezVous = rendezVousRepository.findByDateCreationAfter(dateLimite);
-        return ResponseEntity.ok(rendezVous);
+        List<RendezVousDTO> rendezVousDTOs = rendezVous.stream()
+                .map(entityMapper::toRendezVousDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rendezVousDTOs);
     }
 
     @GetMapping("/rendezvous/periode")
-    public ResponseEntity<List<RendezVous>> getRendezVousPeriode(
+    public ResponseEntity<List<RendezVousDTO>> getRendezVousPeriode(
             @RequestParam String dateDebut,
             @RequestParam String dateFin) {
 
@@ -204,13 +237,19 @@ public class AdminController {
         LocalDateTime fin = LocalDateTime.parse(dateFin);
 
         List<RendezVous> rendezVous = rendezVousRepository.findByPeriode(debut, fin);
-        return ResponseEntity.ok(rendezVous);
+        List<RendezVousDTO> rendezVousDTOs = rendezVous.stream()
+                .map(entityMapper::toRendezVousDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rendezVousDTOs);
     }
 
     @GetMapping("/rendezvous/recherche")
-    public ResponseEntity<List<RendezVous>> searchRendezVous(@RequestParam String q) {
+    public ResponseEntity<List<RendezVousDTO>> searchRendezVous(@RequestParam String q) {
         List<RendezVous> rendezVous = rendezVousRepository.searchRendezVous(q);
-        return ResponseEntity.ok(rendezVous);
+        List<RendezVousDTO> rendezVousDTOs = rendezVous.stream()
+                .map(entityMapper::toRendezVousDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(rendezVousDTOs);
     }
 
     @GetMapping("/rendezvous/statistiques/mensuelles")
@@ -225,31 +264,30 @@ public class AdminController {
         return ResponseEntity.ok(stats);
     }
 
-    // ==================== GESTION SPÉCIALITÉS ====================
-
     @GetMapping("/specialites")
-    public ResponseEntity<List<Specialite>> getAllSpecialites() {
+    public ResponseEntity<List<SpecialiteDTO>> getAllSpecialites() {
         List<Specialite> specialites = specialiteRepository.findAll();
-        return ResponseEntity.ok(specialites);
+        List<SpecialiteDTO> specialiteDTOs = specialites.stream()
+                .map(entityMapper::toSpecialiteDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(specialiteDTOs);
     }
 
     @GetMapping("/specialites/{id}/docteurs")
-    public ResponseEntity<List<Docteur>> getDocteursBySpecialite(@PathVariable Long id) {
+    public ResponseEntity<List<DocteurDTO>> getDocteursBySpecialite(@PathVariable Long id) {
         List<Docteur> docteurs = docteurRepository.findBySpecialiteId(id);
-        return ResponseEntity.ok(docteurs);
+        List<DocteurDTO> docteurDTOs = docteurs.stream()
+                .map(entityMapper::toDocteurDTO)
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(docteurDTOs);
     }
 
-    // ==================== MÉTHODES PRIVÉES ====================
-
     private double calculerRevenuMensuel() {
-        // Calcul basé sur les rendez-vous du mois en cours
         LocalDateTime debutMois = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
         LocalDateTime finMois = LocalDateTime.now().withDayOfMonth(LocalDateTime.now().toLocalDate().lengthOfMonth())
                 .withHour(23).withMinute(59).withSecond(59);
 
         long rdvMois = rendezVousRepository.countByDateHeureBetween(debutMois, finMois);
-
-        // Tarif moyen de 50€ par consultation
         return rdvMois * 50.0;
     }
 
@@ -261,9 +299,7 @@ public class AdminController {
         long rdvMois = rendezVousRepository.countByDateHeureBetween(debutMois, finMois);
         long docteursActifs = docteurRepository.countByActifTrue();
 
-        // Estimation: 20 rendez-vous possibles par docteur par mois
         long rdvPossibles = docteursActifs * 20;
-
         return rdvPossibles > 0 ? (rdvMois * 100.0 / rdvPossibles) : 0;
     }
 }
